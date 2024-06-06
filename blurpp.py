@@ -11,11 +11,11 @@ from torchvision.transforms import functional as F
 import dwnls3imgs
 
 
-def get_person_masks(image, model, threshold=0.5):
+def get_person_masks(mask_rcnn, image, threshold=0.5):
     image_tensor = F.to_tensor(image).unsqueeze(0)
 
     with torch.no_grad():
-        predictions = model(image_tensor)[0]
+        predictions = mask_rcnn(image_tensor)[0]
 
     masks = []
     for i in range(len(predictions['labels'])):
@@ -26,10 +26,8 @@ def get_person_masks(image, model, threshold=0.5):
     return masks
 
 
-def blur_people_in_image(img):
-    mask_rcnn = maskrcnn_resnet50_fpn_v2(pretrained=True)
-    mask_rcnn.eval()
-    masks = get_person_masks(img, mask_rcnn)
+def blur_people_in_image(mask_rcnn, img):
+    masks = get_person_masks(mask_rcnn, img)
 
     blurred_img = img.copy()
     for mask in masks:
@@ -54,7 +52,7 @@ def show_comparison(original_img, blurred_img):
     plt.show()
 
 
-def blurpp(key, boxes):
+def blurpp(mask_rcnn, key, boxes):
     img_path = dwnls3imgs.download_obj('scc-prod-accessibility-images', key, './tmp')
     img = cv2.imread(img_path)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -64,18 +62,18 @@ def blurpp(key, boxes):
     print(f'Blurring {len(boxes)} people in the image({key}).')
 
     if not boxes:
-        output_img = blur_people_in_image(img)
+        output_img = blur_people_in_image(mask_rcnn, img)
     else:
         for box in boxes:
             box = {key: int(value) for key, value in box.items()}
             x1, y1, x2, y2 = box['x1'], box['y1'], box['x2'], box['y2']
             partial_img = img[y1:y2, x1:x2:]
-            partial_blurred_img = blur_people_in_image(partial_img)
+            partial_blurred_img = blur_people_in_image(mask_rcnn, partial_img)
             output_img[y1:y2, x1:x2, :] = partial_blurred_img
-            # show_comparison(img, partial_img)
+            show_comparison(img, partial_img)
     os.remove(img_path)
     print(f'Blurring done.', end='\n')
-    show_comparison(img, output_img)
+    # show_comparison(img, output_img)
 
 
 if __name__ == '__main__':
@@ -83,8 +81,10 @@ if __name__ == '__main__':
     parser.add_argument('--source', default='runs/detected/result.json', help='json path for person boxes')
     opt = parser.parse_args()
 
+    mask_rcnn = maskrcnn_resnet50_fpn_v2(pretrained=True)
+    mask_rcnn.eval()
     with open(opt.source) as src:
         boxes = json.load(src)
         print(f'Load boxes from {opt.source}, {len(boxes)} found.')
         for (k, v) in boxes.items():
-            blurpp(k, v)
+            blurpp(mask_rcnn, k, v)
