@@ -33,7 +33,6 @@ def get_object_keys(bucket_name):
                 key = obj['Key']
                 url = get_public_url(bucket_name, key)
                 obj_urls.append(url)
-        break
     print(f'Totally {len(obj_urls)} objects found.', end='\n')
     return obj_urls
 
