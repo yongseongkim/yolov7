@@ -45,7 +45,6 @@ def detectpp(urls):
     t0 = time.time()
     result = {}
     output_dir = Path(increment_path(Path(opt.output), False))  # increment run
-    output_dir.mkdir(parents=True, exist_ok=True)  # make dir
     for p, img, im0s in dataset:
         path = Path(p)
         img = torch.from_numpy(img).to(device)
@@ -89,7 +88,7 @@ def detectpp(urls):
                     label = names[int(cls.item())]
                     x1, y1, x2, y2 = [v.item() for v in xyxy]
                     if cls.item() == 0.0:
-                        ppos.append({x1: x1, y1: y1, x2: x2, y2: y2})
+                        ppos.append({'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2})
                     print(f'{label} is found. ({x1}, {y1}) - ({x2}, {y2})', end='\n')
             # Print time (inference + NMS)
             if detected:
@@ -100,6 +99,8 @@ def detectpp(urls):
 
         if ppos:
             result[path.name] = ppos
+            if not output_dir.exists():
+                output_dir.mkdir(parents=True, exist_ok=True)  # make dir
             with open(output_dir / 'result.json', 'w') as fp:
                 json.dump(result, fp)
     print(f'Total Done. ({time.time() - t0:.3f}s)')
