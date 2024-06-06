@@ -1,5 +1,6 @@
 import json
 import subprocess
+from pathlib import Path
 
 import boto3
 
@@ -32,10 +33,21 @@ def get_object_keys(bucket_name):
                 key = obj['Key']
                 url = get_public_url(bucket_name, key)
                 obj_urls.append(url)
-                # s3_client.download_file(bucket_name, key, './tmp/{}'.format(key))
         break
     print(f'Totally {len(obj_urls)} objects found.', end='\n')
     return obj_urls
+
+
+def download_obj(bucket_name, key, output_dir):
+    output_dir = Path(output_dir)
+    s3_client = get_vault_session('scc')
+    downloaded_path = f'{output_dir}/{key}'
+    print(f'Downloading {key} to {downloaded_path}.')
+    if not output_dir.exists():
+        output_dir.mkdir(parents=True, exist_ok=True)
+    s3_client.download_file(bucket_name, key, downloaded_path)
+    print(f'{key} downloaded.')
+    return downloaded_path
 
 
 if __name__ == '__main__':
