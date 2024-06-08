@@ -5,6 +5,7 @@ import os
 import cv2
 import matplotlib.pyplot as plt
 import torch
+import pathlib as Path
 from torchvision.models.detection import maskrcnn_resnet50_fpn_v2
 from torchvision.transforms import functional as F
 
@@ -52,8 +53,20 @@ def show_comparison(original_img, blurred_img):
     plt.show()
 
 
-def blurpp(mask_rcnn, key, boxes):
-    img_path = dwnls3imgs.download_obj('scc-prod-accessibility-images', key, './tmp')
+def add_suffix_to_filename(filename, suffix):
+    # Split the filename into the base name and the extension
+    base, ext = os.path.splitext(filename)
+
+    # Concatenate the suffix to the base name
+    new_filename = base + suffix + ext
+
+    return new_filename
+
+
+def blurpp(s3clinet, mask_rcnn, key, boxes):
+    output_dir = f'./runs/blurred'
+    img_path = dwnls3imgs.download_obj(s3client,
+                                       'scc-prod-accessibility-images', key, output_dir)
     img = cv2.imread(img_path)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
@@ -70,15 +83,19 @@ def blurpp(mask_rcnn, key, boxes):
             partial_img = img[y1:y2, x1:x2:]
             partial_blurred_img = blur_people_in_image(mask_rcnn, partial_img)
             output_img[y1:y2, x1:x2, :] = partial_blurred_img
-            show_comparison(img, partial_img)
-    os.remove(img_path)
+            # show_comparison(img, partial_img)
+    # os.remove(img_path)
+    output_img = cv2.cvtColor(output_img, cv2.COLOR_RGB2BGR)
+    cv2.imwrite(
+        f'{output_dir}/{add_suffix_to_filename(key, "_b")}', output_img)
     print(f'Blurring done.', end='\n')
     # show_comparison(img, output_img)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--source', default='runs/detected/result.json', help='json path for person boxes')
+    parser.add_argument(
+        '--source', default='runs/detected/result.json', help='json path for person boxes')
     opt = parser.parse_args()
 
     mask_rcnn = maskrcnn_resnet50_fpn_v2(pretrained=True)
@@ -86,5 +103,6 @@ if __name__ == '__main__':
     with open(opt.source) as src:
         boxes = json.load(src)
         print(f'Load boxes from {opt.source}, {len(boxes)} found.')
+        s3client = dwnls3imgs.get_vault_session('scc')
         for (k, v) in boxes.items():
-            blurpp(mask_rcnn, k, v)
+            blurpp(s3client, mask_rcnn, k, v)

@@ -37,9 +37,8 @@ def get_object_keys(bucket_name):
     return obj_urls
 
 
-def download_obj(bucket_name, key, output_dir):
+def download_obj(s3_client, bucket_name, key, output_dir):
     output_dir = Path(output_dir)
-    s3_client = get_vault_session('scc')
     downloaded_path = f'{output_dir}/{key}'
     print(f'Downloading {key} to {downloaded_path}.')
     if not output_dir.exists():
