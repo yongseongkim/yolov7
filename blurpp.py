@@ -32,7 +32,7 @@ def blur_people_in_image(mask_rcnn, img):
 
     blurred_img = img.copy()
     for mask in masks:
-        total_blurred_img = cv2.GaussianBlur(img, (21, 21), 3)
+        total_blurred_img = cv2.GaussianBlur(img, (0, 0), 4)
         blurred_img[mask] = total_blurred_img[mask]
     return blurred_img
 
